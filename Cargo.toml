@@ -10,6 +10,7 @@ fibers = "0.1"
 fibers_http_server = "0.1"
 futures = "0.1"
 httpcodec = "0.2"
-slog = "2"
+mime_guess = "1"
+slog = {version = "2", features = ["release_max_level_debug"]}
 sloggers = "0.2"
 trackable = "0.2"
