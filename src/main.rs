@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate clap;
+extern crate daemonize;
 extern crate fibers;
 extern crate fibers_http_server;
 extern crate futures;
 extern crate rofis;
+#[macro_use]
 extern crate slog;
 extern crate sloggers;
 #[macro_use]
@@ -39,11 +41,18 @@ fn main() {
                 .default_value("info")
                 .possible_values(&["debug", "info", "warning", "error"]),
         )
+        .arg(Arg::with_name("DAEMONIZE").long("daemonize").short("d"))
         .get_matches();
     let port = matches.value_of("PORT").expect("Never fails");
     let bind_addr = try_parse!(format!("0.0.0.0:{}", port));
     let log_level = try_parse!(matches.value_of("LOG_LEVEL").expect("Never fails"));
     let logger = track_try_unwrap!(TerminalLoggerBuilder::new().level(log_level).build());
+    let daemonize = matches.is_present("DAEMONIZE");
+    if daemonize {
+        let current_dir = track_try_unwrap!(track_any_err!(std::env::current_dir()));
+        let d = daemonize::Daemonize::new().working_directory(current_dir);
+        track_try_unwrap!(track_any_err!(d.start()));
+    }
 
     let executor = track_try_unwrap!(track_any_err!(ThreadPoolExecutor::with_thread_count(1)));
     let mut builder = ServerBuilder::new(bind_addr);
@@ -54,5 +63,6 @@ fn main() {
 
     let http_server = builder.finish(executor.handle());
     executor.spawn(http_server.map_err(|e| panic!("{}", e)));
+
     track_try_unwrap!(track_any_err!(executor.run()));
 }

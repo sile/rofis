@@ -75,6 +75,14 @@ version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "daemonize"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "factory"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,6 +420,7 @@ version = "0.1.0"
 dependencies = [
  "bytecodec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "daemonize 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fibers 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "fibers_http_server 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -720,6 +729,7 @@ dependencies = [
 "checksum chrono 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a81892f0d5a53f46fc05ef0b917305a81c13f1f13bb59ac91ff595817f0764b1"
 "checksum clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f0f16b89cbb9ee36d87483dc939fe9f1e13c05898d56d7b230a0d4dff033a536"
 "checksum crossbeam 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)" = "bd66663db5a988098a89599d4857919b3acf7f61402e61365acfd3919857b9be"
+"checksum daemonize 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4093d27eb267d617f03c2ee25d4c3ca525b89a76154001954a11984508ffbde5"
 "checksum factory 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "12035ccde1cff7c507200fd9e7ad0dbceda81d3cf6f68a265974a213d24acfde"
 "checksum fibers 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "fd2cd0b641968d7390b8a5a0137fca20a1ff7bfb66c4bf64fe9c01db887f19b2"
 "checksum fibers_http_server 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "4e041045b5a52fb1641383866dd99573267f41017bb63bbe9d6f675332280f06"

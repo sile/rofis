@@ -6,6 +6,7 @@ authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 [dependencies]
 bytecodec = "0.4"
 clap = "2"
+daemonize = "0.3"
 fibers = "0.1"
 fibers_http_server = "0.1"
 futures = "0.1"
