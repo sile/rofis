@@ -1,3 +1,5 @@
+//! A read-only, puny HTTP file server.
+#![warn(missing_docs)]
 extern crate bytecodec;
 extern crate fibers_http_server;
 extern crate futures;
