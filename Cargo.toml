@@ -8,6 +8,7 @@ repository = "https://github.com/sile/rofis"
 readme = "README.md"
 keywords = ["http"]
 license = "MIT"
+edition = "2018"
 
 [badges]
 travis-ci = {repository = "sile/rofis"}

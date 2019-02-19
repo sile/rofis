@@ -1,12 +1,5 @@
 #[macro_use]
 extern crate clap;
-extern crate daemonize;
-extern crate fibers;
-extern crate fibers_http_server;
-extern crate futures;
-extern crate rofis;
-extern crate slog;
-extern crate sloggers;
 #[macro_use]
 extern crate trackable;
 

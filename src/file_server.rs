@@ -1,3 +1,4 @@
+use crate::{Error, Result};
 use bytecodec::bytes::BytesEncoder;
 use bytecodec::null::NullDecoder;
 use fibers_http_server::{HandleRequest, Reply, Req, Res, ServerBuilder, Status};
@@ -8,8 +9,6 @@ use slog::Logger;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-
-use {Error, Result};
 
 /// Read-only HTTP file server.
 #[derive(Debug, Clone)]
