@@ -22,5 +22,5 @@ futures = "0.1"
 httpcodec = "0.2"
 mime_guess = "1"
 slog = {version = "2", features = ["release_max_level_debug"]}
-sloggers = "0.2"
+sloggers = "0.3"
 trackable = "0.2"
