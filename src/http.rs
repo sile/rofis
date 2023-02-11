@@ -129,6 +129,10 @@ impl HttpResponse {
         }
     }
 
+    pub fn is_not_found(&self) -> bool {
+        self.status == "404 Not Found"
+    }
+
     pub fn to_writer<W: Write>(&self, writer: &mut W) -> orfail::Result<()> {
         write!(writer, "HTTP/1.1 {}\r\n", self.status).or_fail()?;
         write!(writer, "Content-Length: {}\r\n", self.body.len()).or_fail()?;

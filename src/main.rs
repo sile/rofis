@@ -16,8 +16,9 @@ fn main() -> orfail::Result<()> {
     env_logger::try_init().or_fail()?;
     let _args = Args::parse();
 
-    log::info!("Starts building directories index");
-    let mut dirs_index = DirsIndex::build(std::env::current_dir().or_fail()?).or_fail()?;
+    let root_dir = std::env::current_dir().or_fail()?;
+    log::info!("Starts building directories index: root_dir={root_dir:?}");
+    let mut dirs_index = DirsIndex::build(&root_dir).or_fail()?;
     log::info!(
         "Finished building directories index: entries={}",
         dirs_index.len()
@@ -41,7 +42,19 @@ fn main() -> orfail::Result<()> {
         let response = match HttpRequest::from_reader(&mut socket).or_fail() {
             Ok(Ok(request)) => {
                 log::info!("Read: {request:?}");
-                handle_request(&mut dirs_index, request)
+                let response = handle_request(&mut dirs_index, &request);
+                if response.is_not_found() {
+                    // The directories index may be outdated.
+                    log::info!("Starts re-building directories index: root_dir={root_dir:?}");
+                    dirs_index = DirsIndex::build(&root_dir).or_fail()?;
+                    log::info!(
+                        "Finished re-building directories index: entries={}",
+                        dirs_index.len()
+                    );
+                    handle_request(&mut dirs_index, &request)
+                } else {
+                    response
+                }
             }
             Ok(Err(response)) => response,
             Err(e) => {
@@ -59,7 +72,7 @@ fn main() -> orfail::Result<()> {
     Ok(())
 }
 
-fn handle_request(dirs_index: &mut DirsIndex, request: HttpRequest) -> HttpResponse {
+fn handle_request(dirs_index: &mut DirsIndex, request: &HttpRequest) -> HttpResponse {
     // TODO: handle _WATCH
     let path = request.path();
     let (dir, name) = if path.ends_with('/') {

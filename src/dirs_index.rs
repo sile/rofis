@@ -12,6 +12,8 @@ impl DirsIndex {
     pub fn build<P: AsRef<Path>>(root: P) -> orfail::Result<Self> {
         let root = root.as_ref().canonicalize().or_fail()?;
         let mut index = PatriciaSet::new();
+        index.insert("");
+
         let mut stack = vec![root.clone()];
         while let Some(dir) = stack.pop() {
             for entry in std::fs::read_dir(dir).or_fail()? {
