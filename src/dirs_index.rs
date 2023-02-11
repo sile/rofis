@@ -1,9 +1,10 @@
 use orfail::OrFail;
 use patricia_tree::PatriciaSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct DirsIndex {
+    root: PathBuf,
     index: PatriciaSet,
 }
 
@@ -32,7 +33,20 @@ impl DirsIndex {
                 }
             }
         }
-        Ok(Self { index })
+        Ok(Self { root, index })
+    }
+
+    pub fn find_dirs_by_suffix(&self, suffix: &str) -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+        let index_prefix = suffix.bytes().rev().collect::<Vec<_>>();
+        for mut relative_path in self.index.iter_prefix(&index_prefix) {
+            relative_path.reverse();
+            dirs.push(
+                self.root
+                    .join(String::from_utf8(relative_path).expect("unreachable")),
+            );
+        }
+        dirs
     }
 
     pub fn len(&self) -> usize {
