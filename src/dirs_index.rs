@@ -51,6 +51,10 @@ impl DirsIndex {
         dirs
     }
 
+    pub fn root_dir(&self) -> &PathBuf {
+        &self.root
+    }
+
     pub fn len(&self) -> usize {
         self.index.len()
     }

@@ -4,7 +4,11 @@ use rofis::{
     dirs_index::DirsIndex,
     http::{HttpMethod, HttpRequest, HttpResponse, HttpResponseBody},
 };
-use std::net::TcpListener;
+use std::{
+    net::{TcpListener, TcpStream},
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime},
+};
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -42,18 +46,43 @@ fn main() -> orfail::Result<()> {
         let response = match HttpRequest::from_reader(&mut socket).or_fail() {
             Ok(Ok(request)) => {
                 log::info!("Read: {request:?}");
-                let response = handle_request(&mut dirs_index, &request);
-                if response.is_not_found() {
-                    // The directories index may be outdated.
-                    log::info!("Starts re-building directories index: root_dir={root_dir:?}");
-                    dirs_index = DirsIndex::build(&root_dir).or_fail()?;
-                    log::info!(
-                        "Finished re-building directories index: entries={}",
-                        dirs_index.len()
-                    );
-                    handle_request(&mut dirs_index, &request)
-                } else {
-                    response
+                let result = resolve_path(&dirs_index, &request).or_else(|response| {
+                    if response.is_not_found() {
+                        // The directories index may be outdated.
+                        log::info!(
+                            "Starts re-building directories index: root_dir={:?}",
+                            dirs_index.root_dir()
+                        );
+                        match DirsIndex::build(dirs_index.root_dir()).or_fail() {
+                            Ok(new_dirs_index) => {
+                                dirs_index = new_dirs_index;
+                                log::info!(
+                                    "Finished re-building directories index: entries={}",
+                                    dirs_index.len()
+                                );
+                                resolve_path(&dirs_index, &request)
+                            }
+                            Err(e) => {
+                                let e: orfail::Failure = e;
+                                log::warn!("Failed to re-build directories index: {e}");
+                                Err(response)
+                            }
+                        }
+                    } else {
+                        Err(response)
+                    }
+                });
+
+                match result {
+                    Err(response) => response,
+                    Ok(resolved_path) => match request.method() {
+                        HttpMethod::Head => head_file(resolved_path),
+                        HttpMethod::Get => get_file(resolved_path),
+                        HttpMethod::Watch => {
+                            watch_file(resolved_path, socket);
+                            continue;
+                        }
+                    },
                 }
             }
             Ok(Err(response)) => response,
@@ -63,27 +92,23 @@ fn main() -> orfail::Result<()> {
                 continue;
             }
         };
-        if let Err(e) = response.to_writer(&mut socket) {
-            log::warn!("Failed to write HTTP response: {e}");
-        }
-        log::info!("Wrote: {response:?}");
+        write_response(socket, response);
     }
 
     Ok(())
 }
 
-fn handle_request(dirs_index: &mut DirsIndex, request: &HttpRequest) -> HttpResponse {
+fn resolve_path(dirs_index: &DirsIndex, request: &HttpRequest) -> Result<PathBuf, HttpResponse> {
     let path = request.path();
-
     let (dir, name) = if path.ends_with('/') {
         (path, "index.html")
     } else {
         let mut iter = path.rsplitn(2, '/');
         let Some(name) = iter.next() else {
-            return HttpResponse::bad_request();
+            return Err(HttpResponse::bad_request());
         };
         let Some(dir) = iter.next() else {
-            return HttpResponse::bad_request();
+            return Err(HttpResponse::bad_request());
         };
         (dir, name)
     };
@@ -95,19 +120,58 @@ fn handle_request(dirs_index: &mut DirsIndex, request: &HttpRequest) -> HttpResp
         .filter(|path| path.is_file())
         .collect::<Vec<_>>();
     if candidates.is_empty() {
-        return HttpResponse::not_found();
+        return Err(HttpResponse::not_found());
     } else if candidates.len() > 1 {
-        return HttpResponse::multiple_choices(candidates.len());
+        return Err(HttpResponse::multiple_choices(candidates.len()));
     }
+    Ok(candidates[0].clone())
+}
 
-    let Ok(content) = std::fs::read(&candidates[0]) else  {
+fn get_file<P: AsRef<Path>>(path: P) -> HttpResponse {
+    let Ok(content) = std::fs::read(&path) else  {
          return HttpResponse::internal_server_error();
     };
-    let mime = mime_guess::from_path(name).first_or_octet_stream();
-    let body = match request.method() {
-        HttpMethod::Head => HttpResponseBody::Length(content.len()),
-        HttpMethod::Get => HttpResponseBody::Content(content),
-        _ => unreachable!(),
-    };
+    let mime = mime_guess::from_path(path).first_or_octet_stream();
+    let body = HttpResponseBody::Content(content);
     HttpResponse::ok(mime, body)
+}
+
+fn head_file<P: AsRef<Path>>(path: P) -> HttpResponse {
+    let Ok(content) = std::fs::read(&path) else  {
+         return HttpResponse::internal_server_error();
+    };
+    let mime = mime_guess::from_path(path).first_or_octet_stream();
+    let body = HttpResponseBody::Length(content.len());
+    HttpResponse::ok(mime, body)
+}
+
+fn watch_file(path: PathBuf, socket: TcpStream) {
+    let Some(mtime) = get_mtime(&path) else {
+        write_response(socket, HttpResponse::internal_server_error());
+        return;
+    };
+    log::info!("Starts watching: path={path:?}, mtime={mtime:?}");
+
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(100));
+        let latest_mtime = get_mtime(&path);
+        if latest_mtime != Some(mtime) {
+            log::info!("Stopped watching: path={path:?}, mtime={latest_mtime:?}");
+            let response = get_file(path);
+            write_response(socket, response);
+            return;
+        }
+    });
+}
+
+fn get_mtime<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
+    path.as_ref().metadata().ok()?.modified().ok()
+}
+
+fn write_response(mut socket: TcpStream, response: HttpResponse) {
+    if let Err(e) = response.to_writer(&mut socket) {
+        log::warn!("Failed to write HTTP response: {e}");
+    } else {
+        log::info!("Wrote: {response:?}");
+    }
 }
