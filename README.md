@@ -2,7 +2,6 @@ rofis
 =====
 
 [![rofis](https://img.shields.io/crates/v/rofis.svg)](https://crates.io/crates/rofis)
-[![Documentation](https://docs.rs/rofis/badge.svg)](https://docs.rs/rofis)
 [![Actions Status](https://github.com/sile/rofis/workflows/CI/badge.svg)](https://github.com/sile/rofis/actions)
 ![License](https://img.shields.io/crates/l/rofis)
 
