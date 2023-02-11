@@ -1,6 +1,6 @@
 [package]
 name = "rofis"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 description = "A read-only, puny HTTP file server"
 homepage = "https://github.com/sile/rofis"
@@ -8,17 +8,10 @@ repository = "https://github.com/sile/rofis"
 readme = "README.md"
 keywords = ["http"]
 license = "MIT"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bytecodec = "0.4"
-clap = "2"
-daemonize = "0.3"
-fibers = "0.1"
-fibers_http_server = "0.1"
-futures = "0.1"
-httpcodec = "0.2"
-mime_guess = "1"
-slog = {version = "2", features = ["release_max_level_debug"]}
-sloggers = "2"
-trackable = "0.2"
+clap = { version = "4.1.4", features = ["derive"] }
+env_logger = "0.10.0"
+log = "0.4.17"
+orfail = "0.1.2"
