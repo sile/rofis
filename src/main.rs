@@ -9,7 +9,7 @@ use std::net::TcpListener;
 #[derive(Debug, Parser)]
 #[clap(version)]
 struct Args {
-    // TODO: root, port
+    // TODO: root, port, log-level, daemonize
 }
 
 fn main() -> orfail::Result<()> {
@@ -73,8 +73,8 @@ fn main() -> orfail::Result<()> {
 }
 
 fn handle_request(dirs_index: &mut DirsIndex, request: &HttpRequest) -> HttpResponse {
-    // TODO: handle _WATCH
     let path = request.path();
+
     let (dir, name) = if path.ends_with('/') {
         (path, "index.html")
     } else {
@@ -107,6 +107,7 @@ fn handle_request(dirs_index: &mut DirsIndex, request: &HttpRequest) -> HttpResp
     let body = match request.method() {
         HttpMethod::Head => HttpResponseBody::Length(content.len()),
         HttpMethod::Get => HttpResponseBody::Content(content),
+        _ => unreachable!(),
     };
     HttpResponse::ok(mime, body)
 }

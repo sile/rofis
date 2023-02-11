@@ -7,6 +7,9 @@ use url::Url;
 pub enum HttpMethod {
     Head,
     Get,
+
+    // rofis original method.
+    Watch,
 }
 
 #[derive(Debug)]
@@ -33,6 +36,9 @@ impl HttpRequest {
         } else if line.starts_with("HEAD ") {
             line = &line["HEAD ".len()..];
             HttpMethod::Head
+        } else if line.starts_with("WATCH ") {
+            line = &line["WATCH ".len()..];
+            HttpMethod::Watch
         } else {
             return Ok(Err(HttpResponse::method_not_allowed()));
         };
