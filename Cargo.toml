@@ -12,6 +12,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.1.4", features = ["derive"] }
+daemonize = "0.4.1"
 env_logger = "0.10.0"
 log = "0.4.17"
 mime_guess = "2.0.4"

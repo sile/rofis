@@ -10,17 +10,46 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+/// Read-only HTTP file server.
 #[derive(Debug, Parser)]
 #[clap(version)]
 struct Args {
-    // TODO: root, port, log-level, daemonize
+    /// Listen port number.
+    #[clap(short, long, default_value_t = 8080)]
+    port: u16,
+
+    /// Root directory [default: $PWD].
+    #[clap(short, long)]
+    root_dir: Option<PathBuf>,
+
+    /// Log level (DEBUG | INFO | WARN | ERROR)..
+    #[clap(short, long, default_value_t = log::LevelFilter::Info)]
+    log_level: log::LevelFilter,
+
+    /// Daemonize HTTP server.
+    #[clap(short, long)]
+    daemonize: bool,
 }
 
 fn main() -> orfail::Result<()> {
-    env_logger::try_init().or_fail()?;
-    let _args = Args::parse();
+    let args = Args::parse();
 
-    let root_dir = std::env::current_dir().or_fail()?;
+    env_logger::builder()
+        .filter_level(args.log_level)
+        .try_init()
+        .or_fail()?;
+
+    if args.daemonize {
+        daemonize::Daemonize::new()
+            .working_directory(std::env::current_dir().or_fail()?)
+            .start()
+            .or_fail()?;
+    }
+
+    let root_dir = args
+        .root_dir
+        .clone()
+        .unwrap_or(std::env::current_dir().or_fail()?);
     log::info!("Starts building directories index: root_dir={root_dir:?}");
     let mut dirs_index = DirsIndex::build(&root_dir).or_fail()?;
     log::info!(
@@ -28,9 +57,8 @@ fn main() -> orfail::Result<()> {
         dirs_index.len()
     );
 
-    let port = 8080;
-    let listener = TcpListener::bind(("127.0.0.1", port)).or_fail()?;
-    log::info!("Started HTTP server on {port} port");
+    let listener = TcpListener::bind(("127.0.0.1", args.port)).or_fail()?;
+    log::info!("Started HTTP server on {} port", args.port);
 
     for socket in listener.incoming() {
         let mut socket = match socket.or_fail() {
