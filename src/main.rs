@@ -26,22 +26,32 @@ fn main() -> orfail::Result<()> {
     log::info!("Started HTTP server on {port} port");
 
     for socket in listener.incoming() {
-        let mut socket = match socket {
+        let mut socket = match socket.or_fail() {
             Ok(socket) => socket,
             Err(e) => {
+                let e: orfail::Failure = e;
                 log::warn!("Failed to accept socket: {e}");
                 continue;
             }
         };
-        log::info!("Accepted a new client: {socket:?}");
+        log::debug!("Accepted a client socket: {socket:?}");
 
-        let request = match HttpRequest::from_reader(&mut socket) {
-            Ok(request) => request,
+        let response = match HttpRequest::from_reader(&mut socket).or_fail() {
+            Ok(Ok(request)) => {
+                log::info!("Read: {request:?}");
+                orfail::todo!();
+            }
+            Ok(Err(response)) => response,
             Err(e) => {
+                let e: orfail::Failure = e;
                 log::warn!("Failed to read HTTP request: {e}");
-                orfail::todo!(); // TODO: return BadRequest
+                continue;
             }
         };
+        if let Err(e) = response.to_writer(&mut socket) {
+            log::warn!("Failed to write HTTP response: {e}");
+        }
+        log::info!("Wrote: {response:?}");
     }
 
     Ok(())
