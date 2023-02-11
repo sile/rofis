@@ -12,7 +12,7 @@ pub enum HttpMethod {
 #[derive(Debug)]
 pub struct HttpRequest {
     method: HttpMethod,
-    url: Url,
+    path: String,
 }
 
 impl HttpRequest {
@@ -57,7 +57,10 @@ impl HttpRequest {
             }
         }
 
-        Ok(Ok(Self { method, url }))
+        Ok(Ok(Self {
+            method,
+            path: url.path().to_owned(),
+        }))
     }
 
     pub fn method(&self) -> HttpMethod {
@@ -65,14 +68,14 @@ impl HttpRequest {
     }
 
     pub fn path(&self) -> &str {
-        self.url.path()
+        &self.path
     }
 }
 
 pub struct HttpResponse {
-    pub status: &'static str,
-    pub header: Vec<(&'static str, String)>,
-    pub body: Vec<u8>,
+    status: &'static str,
+    header: Vec<(&'static str, String)>,
+    body: HttpResponseBody,
 }
 
 impl HttpResponse {
@@ -80,7 +83,7 @@ impl HttpResponse {
         Self {
             status: "400 Bad Request",
             header: Vec::new(),
-            body: b"Bad Request".to_vec(),
+            body: HttpResponseBody::Content(b"Bad Request".to_vec()),
         }
     }
 
@@ -88,7 +91,7 @@ impl HttpResponse {
         Self {
             status: "404 Not Found",
             header: Vec::new(),
-            body: b"Not Found".to_vec(),
+            body: HttpResponseBody::Content(b"Not Found".to_vec()),
         }
     }
 
@@ -96,15 +99,17 @@ impl HttpResponse {
         Self {
             status: "405 Method Not Allowed",
             header: vec![("Allow", "GET, HEAD".to_owned())],
-            body: b"Method Not Allowed".to_vec(),
+            body: HttpResponseBody::Content(b"Method Not Allowed".to_vec()),
         }
     }
 
-    pub fn multiple_choices() -> Self {
+    pub fn multiple_choices(candidates: usize) -> Self {
         Self {
             status: "303 Multiple Choices",
             header: Vec::new(),
-            body: b"Multiple Choices".to_vec(),
+            body: HttpResponseBody::Content(
+                format!("Multiple Choices: {candidates} candidates").into_bytes(),
+            ),
         }
     }
 
@@ -112,11 +117,11 @@ impl HttpResponse {
         Self {
             status: "500 Internal Server Error",
             header: Vec::new(),
-            body: b"Internal Server Error".to_vec(),
+            body: HttpResponseBody::Content(b"Internal Server Error".to_vec()),
         }
     }
 
-    pub fn ok(mime: Mime, body: Vec<u8>) -> Self {
+    pub fn ok(mime: Mime, body: HttpResponseBody) -> Self {
         Self {
             status: "200 OK",
             header: vec![("Content-Type", mime.to_string())],
@@ -132,7 +137,9 @@ impl HttpResponse {
             write!(writer, "{}: {}\r\n", name, value).or_fail()?;
         }
         write!(writer, "\r\n").or_fail()?;
-        writer.write_all(&self.body).or_fail()?;
+        if let HttpResponseBody::Content(content) = &self.body {
+            writer.write_all(content).or_fail()?;
+        }
         Ok(())
     }
 }
@@ -145,5 +152,20 @@ impl std::fmt::Debug for HttpResponse {
             self.status,
             self.body.len()
         )
+    }
+}
+
+#[derive(Debug)]
+pub enum HttpResponseBody {
+    Content(Vec<u8>),
+    Length(usize),
+}
+
+impl HttpResponseBody {
+    pub fn len(&self) -> usize {
+        match self {
+            HttpResponseBody::Content(x) => x.len(),
+            HttpResponseBody::Length(x) => *x,
+        }
     }
 }

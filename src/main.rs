@@ -2,7 +2,7 @@ use clap::Parser;
 use orfail::OrFail;
 use rofis::{
     dirs_index::DirsIndex,
-    http::{HttpRequest, HttpResponse},
+    http::{HttpMethod, HttpRequest, HttpResponse, HttpResponseBody},
 };
 use std::net::TcpListener;
 
@@ -84,12 +84,16 @@ fn handle_request(dirs_index: &mut DirsIndex, request: HttpRequest) -> HttpRespo
     if candidates.is_empty() {
         return HttpResponse::not_found();
     } else if candidates.len() > 1 {
-        return HttpResponse::multiple_choices();
+        return HttpResponse::multiple_choices(candidates.len());
     }
 
     let Ok(content) = std::fs::read(&candidates[0]) else  {
          return HttpResponse::internal_server_error();
     };
     let mime = mime_guess::from_path(name).first_or_octet_stream();
-    HttpResponse::ok(mime, content)
+    let body = match request.method() {
+        HttpMethod::Head => HttpResponseBody::Length(content.len()),
+        HttpMethod::Get => HttpResponseBody::Content(content),
+    };
+    HttpResponse::ok(mime, body)
 }
