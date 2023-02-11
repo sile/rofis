@@ -44,7 +44,7 @@ impl HttpRequest {
         };
 
         // Path.
-        if !line.starts_with("/") {
+        if !line.starts_with('/') {
             return Ok(Err(HttpResponse::bad_request()));
         }
         let path = &line[..line.find(" HTTP/1.1\r\n").or_fail()?];
@@ -144,7 +144,7 @@ impl HttpResponse {
         write!(writer, "Content-Length: {}\r\n", self.body.len()).or_fail()?;
         write!(writer, "Connection: close\r\n").or_fail()?;
         for (name, value) in &self.header {
-            write!(writer, "{}: {}\r\n", name, value).or_fail()?;
+            write!(writer, "{name}: {value}\r\n").or_fail()?;
         }
         write!(writer, "\r\n").or_fail()?;
         if let HttpResponseBody::Content(content) = &self.body {
@@ -172,6 +172,10 @@ pub enum HttpResponseBody {
 }
 
 impl HttpResponseBody {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         match self {
             HttpResponseBody::Content(x) => x.len(),

@@ -20,18 +20,18 @@ impl DirsIndex {
                 let entry = entry.or_fail()?;
                 let file_type = entry.file_type().or_fail()?;
                 let file_path = entry.path();
-                if file_type.is_dir() {
-                    if file_path.file_name().map_or(false, |name| {
-                        name.to_str().map_or(false, |name| !name.starts_with("."))
-                    }) {
-                        let relative_path = file_path
-                            .strip_prefix(&root)
-                            .or_fail()?
-                            .to_str()
-                            .or_fail()?;
-                        index.insert(relative_path.bytes().rev().collect::<Vec<_>>());
-                        stack.push(file_path);
-                    }
+                if file_type.is_dir()
+                    && file_path.file_name().map_or(false, |name| {
+                        name.to_str().map_or(false, |name| !name.starts_with('.'))
+                    })
+                {
+                    let relative_path = file_path
+                        .strip_prefix(&root)
+                        .or_fail()?
+                        .to_str()
+                        .or_fail()?;
+                    index.insert(relative_path.bytes().rev().collect::<Vec<_>>());
+                    stack.push(file_path);
                 }
             }
         }
@@ -53,6 +53,10 @@ impl DirsIndex {
 
     pub fn root_dir(&self) -> &PathBuf {
         &self.root
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.index.is_empty()
     }
 
     pub fn len(&self) -> usize {
