@@ -1,3 +1,4 @@
+use mime_guess::Mime;
 use orfail::OrFail;
 use std::io::{BufRead, BufReader, Read, Write};
 use url::Url;
@@ -83,6 +84,14 @@ impl HttpResponse {
         }
     }
 
+    pub fn not_found() -> Self {
+        Self {
+            status: "404 Not Found",
+            header: Vec::new(),
+            body: b"Not Found".to_vec(),
+        }
+    }
+
     pub fn method_not_allowed() -> Self {
         Self {
             status: "405 Method Not Allowed",
@@ -91,8 +100,40 @@ impl HttpResponse {
         }
     }
 
+    pub fn multiple_choices() -> Self {
+        Self {
+            status: "303 Multiple Choices",
+            header: Vec::new(),
+            body: b"Multiple Choices".to_vec(),
+        }
+    }
+
+    pub fn internal_server_error() -> Self {
+        Self {
+            status: "500 Internal Server Error",
+            header: Vec::new(),
+            body: b"Internal Server Error".to_vec(),
+        }
+    }
+
+    pub fn ok(mime: Mime, body: Vec<u8>) -> Self {
+        Self {
+            status: "200 OK",
+            header: vec![("Content-Type", mime.to_string())],
+            body,
+        }
+    }
+
     pub fn to_writer<W: Write>(&self, writer: &mut W) -> orfail::Result<()> {
-        orfail::todo!()
+        write!(writer, "HTTP/1.1 {}\r\n", self.status).or_fail()?;
+        write!(writer, "Content-Length: {}\r\n", self.body.len()).or_fail()?;
+        write!(writer, "Connection: close\r\n").or_fail()?;
+        for (name, value) in &self.header {
+            write!(writer, "{}: {}\r\n", name, value).or_fail()?;
+        }
+        write!(writer, "\r\n").or_fail()?;
+        writer.write_all(&self.body).or_fail()?;
+        Ok(())
     }
 }
 

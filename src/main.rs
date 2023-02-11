@@ -1,8 +1,10 @@
-use std::net::TcpListener;
-
 use clap::Parser;
 use orfail::OrFail;
-use rofis::{dirs_index::DirsIndex, http::HttpRequest};
+use rofis::{
+    dirs_index::DirsIndex,
+    http::{HttpRequest, HttpResponse},
+};
+use std::net::TcpListener;
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -15,7 +17,7 @@ fn main() -> orfail::Result<()> {
     let _args = Args::parse();
 
     log::info!("Starts building directories index");
-    let dirs_index = DirsIndex::build(std::env::current_dir().or_fail()?).or_fail()?;
+    let mut dirs_index = DirsIndex::build(std::env::current_dir().or_fail()?).or_fail()?;
     log::info!(
         "Finished building directories index: entries={}",
         dirs_index.len()
@@ -39,7 +41,7 @@ fn main() -> orfail::Result<()> {
         let response = match HttpRequest::from_reader(&mut socket).or_fail() {
             Ok(Ok(request)) => {
                 log::info!("Read: {request:?}");
-                orfail::todo!();
+                handle_request(&mut dirs_index, request)
             }
             Ok(Err(response)) => response,
             Err(e) => {
@@ -55,4 +57,39 @@ fn main() -> orfail::Result<()> {
     }
 
     Ok(())
+}
+
+fn handle_request(dirs_index: &mut DirsIndex, request: HttpRequest) -> HttpResponse {
+    // TODO: handle _WATCH
+    let path = request.path();
+    let (dir, name) = if path.ends_with('/') {
+        (path, "index.html")
+    } else {
+        let mut iter = path.rsplitn(2, '/');
+        let Some(name) = iter.next() else {
+            return HttpResponse::bad_request();
+        };
+        let Some(dir) = iter.next() else {
+            return HttpResponse::bad_request();
+        };
+        (dir, name)
+    };
+
+    let candidates = dirs_index
+        .find_dirs_by_suffix(dir.trim_matches('/'))
+        .into_iter()
+        .map(|dir| dir.join(name))
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return HttpResponse::not_found();
+    } else if candidates.len() > 1 {
+        return HttpResponse::multiple_choices();
+    }
+
+    let Ok(content) = std::fs::read(&candidates[0]) else  {
+         return HttpResponse::internal_server_error();
+    };
+    let mime = mime_guess::from_path(name).first_or_octet_stream();
+    HttpResponse::ok(mime, content)
 }
