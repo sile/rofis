@@ -7,9 +7,6 @@ use url::Url;
 pub enum HttpMethod {
     Head,
     Get,
-
-    // rofis original method.
-    Watch,
 }
 
 #[derive(Debug)]
@@ -36,9 +33,6 @@ impl HttpRequest {
         } else if line.starts_with("HEAD ") {
             line = &line["HEAD ".len()..];
             HttpMethod::Head
-        } else if line.starts_with("WATCH ") {
-            line = &line["WATCH ".len()..];
-            HttpMethod::Watch
         } else {
             return Ok(Err(HttpResponse::method_not_allowed()));
         };
@@ -50,7 +44,8 @@ impl HttpRequest {
         let path = &line[..line.find(" HTTP/1.1\r\n").or_fail()?];
         let Ok(url) = Url::options()
             .base_url(Some(&Url::parse("http://localhost/").or_fail()?))
-            .parse(path) else {
+            .parse(path)
+        else {
             return Ok(Err(HttpResponse::bad_request()));
         };
 

@@ -7,7 +7,6 @@ use rofis::{
 use std::{
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
-    time::{Duration, SystemTime},
 };
 
 /// Read-only HTTP file server.
@@ -106,10 +105,6 @@ fn main() -> orfail::Result<()> {
                     Ok(resolved_path) => match request.method() {
                         HttpMethod::Head => head_file(resolved_path),
                         HttpMethod::Get => get_file(resolved_path),
-                        HttpMethod::Watch => {
-                            watch_file(resolved_path, socket);
-                            continue;
-                        }
                     },
                 }
             }
@@ -156,8 +151,8 @@ fn resolve_path(dirs_index: &DirsIndex, request: &HttpRequest) -> Result<PathBuf
 }
 
 fn get_file<P: AsRef<Path>>(path: P) -> HttpResponse {
-    let Ok(content) = std::fs::read(&path) else  {
-         return HttpResponse::internal_server_error();
+    let Ok(content) = std::fs::read(&path) else {
+        return HttpResponse::internal_server_error();
     };
     let mime = mime_guess::from_path(path).first_or_octet_stream();
     let body = HttpResponseBody::Content(content);
@@ -165,35 +160,12 @@ fn get_file<P: AsRef<Path>>(path: P) -> HttpResponse {
 }
 
 fn head_file<P: AsRef<Path>>(path: P) -> HttpResponse {
-    let Ok(content) = std::fs::read(&path) else  {
-         return HttpResponse::internal_server_error();
+    let Ok(content) = std::fs::read(&path) else {
+        return HttpResponse::internal_server_error();
     };
     let mime = mime_guess::from_path(path).first_or_octet_stream();
     let body = HttpResponseBody::Length(content.len());
     HttpResponse::ok(mime, body)
-}
-
-fn watch_file(path: PathBuf, socket: TcpStream) {
-    let Some(mtime) = get_mtime(&path) else {
-        write_response(socket, HttpResponse::internal_server_error());
-        return;
-    };
-    log::info!("Starts watching: path={path:?}, mtime={mtime:?}");
-
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::from_millis(100));
-        let latest_mtime = get_mtime(&path);
-        if latest_mtime != Some(mtime) {
-            log::info!("Stopped watching: path={path:?}, mtime={latest_mtime:?}");
-            let response = get_file(path);
-            write_response(socket, response);
-            return;
-        }
-    });
-}
-
-fn get_mtime<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
-    path.as_ref().metadata().ok()?.modified().ok()
 }
 
 fn write_response(mut socket: TcpStream, response: HttpResponse) {
