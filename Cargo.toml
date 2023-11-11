@@ -1,6 +1,6 @@
 [package]
 name = "rofis"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 description = "A read-only, puny HTTP file server"
 homepage = "https://github.com/sile/rofis"
