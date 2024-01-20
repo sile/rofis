@@ -60,7 +60,10 @@ impl HttpRequest {
 
         Ok(Ok(Self {
             method,
-            path: url.path().to_owned(),
+            path: percent_encoding::percent_decode_str(url.path())
+                .decode_utf8()
+                .or_fail()?
+                .into_owned(),
         }))
     }
 

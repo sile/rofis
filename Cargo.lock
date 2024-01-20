@@ -287,6 +287,7 @@ dependencies = [
  "mime_guess",
  "orfail",
  "patricia_tree",
+ "percent-encoding",
  "url",
 ]
 
