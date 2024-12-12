@@ -21,8 +21,8 @@ impl DirsIndex {
                 let file_type = entry.file_type().or_fail()?;
                 let file_path = entry.path();
                 if file_type.is_dir()
-                    && file_path.file_name().map_or(false, |name| {
-                        name.to_str().map_or(false, |name| !name.starts_with('.'))
+                    && file_path.file_name().is_some_and(|name| {
+                        name.to_str().is_some_and(|name| !name.starts_with('.'))
                     })
                 {
                     let relative_path = file_path
