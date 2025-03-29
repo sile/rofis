@@ -69,7 +69,7 @@ impl Args {
 
 fn main() -> noargs::Result<()> {
     let args = Args::parse()?;
-    if let Some(text) = args.version.as_ref().or_else(|| args.help.as_ref()) {
+    if let Some(text) = args.version.as_ref().or(args.help.as_ref()) {
         print!("{text}");
         return Ok(());
     }
