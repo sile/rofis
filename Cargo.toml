@@ -8,7 +8,7 @@ repository = "https://github.com/sile/rofis"
 readme = "README.md"
 keywords = ["http"]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 clap = { version = "4.1.4", features = ["derive"] }
@@ -17,6 +17,6 @@ env_logger = "0.11.0"
 log = "0.4.17"
 mime_guess = "2.0.4"
 orfail = "1"
-patricia_tree = "0.8"
+patricia_tree = "0.9"
 percent-encoding = "2.3.1"
 url = "2.3.1"
