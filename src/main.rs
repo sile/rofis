@@ -4,12 +4,13 @@ use rofis::{
     http::{HttpMethod, HttpRequest, HttpResponse, HttpResponseBody},
 };
 use std::{
-    net::{TcpListener, TcpStream},
+    net::{IpAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
 };
 
 #[derive(Debug)]
 struct Args {
+    addr: IpAddr,
     port: u16,
     root_dir: PathBuf,
     log_level: log::LevelFilter,
@@ -29,6 +30,12 @@ impl Args {
         }
 
         Ok(Self {
+            addr: noargs::opt("addr")
+                .ty("IP_ADDR")
+                .default("127.0.0.1")
+                .doc("Listen address.")
+                .take(&mut args)
+                .parse()?,
             port: noargs::opt("port")
                 .short('p')
                 .ty("INTEGER")
@@ -94,8 +101,11 @@ fn main() -> noargs::Result<()> {
         dirs_index.len()
     );
 
-    let listener = TcpListener::bind(("127.0.0.1", args.port)).or_fail()?;
-    log::info!("Started HTTP server on {} port", args.port);
+    let listener = TcpListener::bind((args.addr, args.port)).or_fail()?;
+    log::info!(
+        "Started HTTP server on {}",
+        listener.local_addr().or_fail()?
+    );
 
     for socket in listener.incoming() {
         let mut socket = match socket.or_fail() {
