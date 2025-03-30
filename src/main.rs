@@ -1,4 +1,3 @@
-use clap::Parser;
 use orfail::OrFail;
 use rofis::{
     dirs_index::DirsIndex,
@@ -9,29 +8,71 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Read-only HTTP file server.
-#[derive(Debug, Parser)]
-#[clap(version)]
+#[derive(Debug)]
 struct Args {
-    /// Listen port number.
-    #[clap(short, long, default_value_t = 8080)]
     port: u16,
-
-    /// Root directory [default: $PWD].
-    #[clap(short, long)]
-    root_dir: Option<PathBuf>,
-
-    /// Log level (DEBUG | INFO | WARN | ERROR)..
-    #[clap(short, long, default_value_t = log::LevelFilter::Info)]
+    root_dir: PathBuf,
     log_level: log::LevelFilter,
-
-    /// Daemonize HTTP server.
-    #[clap(short, long)]
     daemonize: bool,
+    version: Option<String>,
+    help: Option<String>,
 }
 
-fn main() -> orfail::Result<()> {
-    let args = Args::parse();
+impl Args {
+    fn parse() -> noargs::Result<Self> {
+        let mut args = noargs::raw_args();
+
+        args.metadata_mut().app_name = env!("CARGO_PKG_NAME");
+        args.metadata_mut().app_description = env!("CARGO_PKG_DESCRIPTION");
+        if noargs::HELP_FLAG.take(&mut args).is_present() {
+            args.metadata_mut().help_mode = true;
+        }
+
+        Ok(Self {
+            port: noargs::opt("port")
+                .short('p')
+                .ty("INTEGER")
+                .default("8080")
+                .doc("Listen port number.")
+                .take(&mut args)
+                .parse()?,
+            root_dir: noargs::opt("root-dir")
+                .short('r')
+                .ty("PATH")
+                .env("PWD")
+                .doc("Root directory.")
+                .take(&mut args)
+                .parse()?,
+            log_level: noargs::opt("log-level")
+                .short('l')
+                .ty("DEBUG | INFO | WARN | ERROR")
+                .default("INFO")
+                .doc("Log level.")
+                .take(&mut args)
+                .parse()?,
+            daemonize: noargs::flag("daemonize")
+                .short('d')
+                .doc("Daemonize HTTP server.")
+                .take(&mut args)
+                .is_present(),
+            version: noargs::VERSION_FLAG.take(&mut args).is_present().then(|| {
+                format!(
+                    "{} {}\n",
+                    env!("CARGO_PKG_NAME"),
+                    env!("CARGO_PKG_DESCRIPTION")
+                )
+            }),
+            help: args.finish()?,
+        })
+    }
+}
+
+fn main() -> noargs::Result<()> {
+    let args = Args::parse()?;
+    if let Some(text) = args.version.as_ref().or(args.help.as_ref()) {
+        print!("{text}");
+        return Ok(());
+    }
 
     env_logger::builder()
         .filter_level(args.log_level)
@@ -45,10 +86,7 @@ fn main() -> orfail::Result<()> {
             .or_fail()?;
     }
 
-    let root_dir = args
-        .root_dir
-        .clone()
-        .unwrap_or(std::env::current_dir().or_fail()?);
+    let root_dir = args.root_dir;
     log::info!("Starts building directories index: root_dir={root_dir:?}");
     let mut dirs_index = DirsIndex::build(&root_dir).or_fail()?;
     log::info!(
