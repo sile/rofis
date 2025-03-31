@@ -13,6 +13,7 @@ pub enum HttpMethod {
 pub struct HttpRequest {
     method: HttpMethod,
     path: String,
+    url: Url,
 }
 
 impl HttpRequest {
@@ -64,6 +65,7 @@ impl HttpRequest {
                 .decode_utf8()
                 .or_fail()?
                 .into_owned(),
+            url,
         }))
     }
 
@@ -73,6 +75,10 @@ impl HttpRequest {
 
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    pub fn is_regex_name(&self) -> bool {
+        self.url.query_pairs().any(|(key, _)| key == "regex")
     }
 }
 
