@@ -1,4 +1,5 @@
 use orfail::OrFail;
+use regex::Regex;
 use rofis::{
     dirs_index::DirsIndex,
     http::{HttpMethod, HttpRequest, HttpResponse, HttpResponseBody},
@@ -185,12 +186,35 @@ fn resolve_path(dirs_index: &DirsIndex, request: &HttpRequest) -> Result<PathBuf
         (dir, name)
     };
 
-    let candidates = dirs_index
+    let candidate_dirs = dirs_index
         .find_dirs_by_suffix(dir.trim_matches('/'))
-        .into_iter()
-        .map(|dir| dir.join(name))
-        .filter(|path| path.is_file())
-        .collect::<Vec<_>>();
+        .into_iter();
+    let candidates = if request.is_regex_name() {
+        if let Ok(regex) = Regex::new(name) {
+            candidate_dirs
+                .filter_map(|dir| std::fs::read_dir(dir).ok())
+                .flatten()
+                .filter_map(|entry| entry.ok())
+                .filter_map(|entry| {
+                    entry
+                        .file_type()
+                        .ok()
+                        .and_then(|ty| ty.is_file().then_some(entry.path()))
+                })
+                .filter(|path| {
+                    path.file_name()
+                        .is_some_and(|name| regex.is_match(&name.to_string_lossy()))
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        }
+    } else {
+        candidate_dirs
+            .map(|dir| dir.join(name))
+            .filter(|path| path.is_file())
+            .collect::<Vec<_>>()
+    };
     if candidates.is_empty() {
         return Err(HttpResponse::not_found());
     } else if candidates.len() > 1 {

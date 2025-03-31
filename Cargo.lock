@@ -441,6 +441,7 @@ dependencies = [
  "orfail",
  "patricia_tree",
  "percent-encoding",
+ "regex",
  "url",
 ]
 
