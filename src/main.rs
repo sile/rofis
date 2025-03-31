@@ -1,4 +1,5 @@
 use orfail::OrFail;
+use rand::seq::SliceRandom;
 use regex::Regex;
 use rofis::{
     dirs_index::DirsIndex,
@@ -189,7 +190,7 @@ fn resolve_path(dirs_index: &DirsIndex, request: &HttpRequest) -> Result<PathBuf
     let candidate_dirs = dirs_index
         .find_dirs_by_suffix(dir.trim_matches('/'))
         .into_iter();
-    let candidates = if request.is_regex_name() {
+    let mut candidates = if request.is_regex_name() {
         if let Ok(regex) = Regex::new(name) {
             candidate_dirs
                 .filter_map(|dir| std::fs::read_dir(dir).ok())
@@ -218,7 +219,11 @@ fn resolve_path(dirs_index: &DirsIndex, request: &HttpRequest) -> Result<PathBuf
     if candidates.is_empty() {
         return Err(HttpResponse::not_found());
     } else if candidates.len() > 1 {
-        return Err(HttpResponse::multiple_choices(candidates.len()));
+        if request.is_random_pickup() {
+            candidates.shuffle(&mut rand::rng());
+        } else {
+            return Err(HttpResponse::multiple_choices(candidates.len()));
+        }
     }
     Ok(candidates[0].clone())
 }
