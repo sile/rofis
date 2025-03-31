@@ -80,6 +80,10 @@ impl HttpRequest {
     pub fn is_regex_name(&self) -> bool {
         self.url.query_pairs().any(|(key, _)| key == "regex")
     }
+
+    pub fn is_random_pickup(&self) -> bool {
+        self.url.query_pairs().any(|(key, _)| key == "random")
+    }
 }
 
 pub struct HttpResponse {
