@@ -49,7 +49,8 @@ impl Args {
                 .env("PWD")
                 .doc("Root directory.")
                 .take(&mut args)
-                .parse()?,
+                .parse_if_present()?
+                .unwrap_or_default(),
             log_level: noargs::opt("log-level")
                 .short('l')
                 .ty("DEBUG | INFO | WARN | ERROR")
